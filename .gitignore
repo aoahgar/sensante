@@ -1,9 +1,14 @@
 __pycache__/
 *.pyc
 venv/
+.venv/
 .env
-models/*.pkl
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
+
+# Fichiers temporaires matplotlib
+*.png
+!figures/
+!figures/*.png
