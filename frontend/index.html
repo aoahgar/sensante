@@ -10,7 +10,7 @@
   <body class="min-h-screen bg-stone-100 text-slate-900">
     <main class="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-6 md:px-8">
       <header class="border-b border-stone-300 pb-4">
-        <p class="text-sm font-semibold uppercase tracking-wide text-emerald-700">SenSante v4</p>
+        <p class="text-sm font-semibold uppercase tracking-wide text-emerald-700">SenSante v1.0</p>
         <h1 class="mt-1 text-3xl font-bold text-slate-950">Diagnostic et explication medicale</h1>
         <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
           Interface de test pour le modele ML SenSante et l'explication Llama 3 via Groq.
@@ -86,7 +86,7 @@
     </main>
 
     <script>
-      const API_URL = "http://127.0.0.1:8000";
+      const API_URL = "";
       const params = new URLSearchParams(window.location.search);
       const lab4Only = params.get("lab") === "4";
       const form = document.getElementById("diagnostic-form");

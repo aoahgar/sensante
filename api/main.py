@@ -9,6 +9,8 @@ import joblib
 import pandas as pd
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from groq import Groq
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -16,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 ROOT = Path(__file__).resolve().parents[1]
 MODELS_DIR = ROOT / "models"
+FRONTEND_DIR = ROOT / "frontend"
 MODEL_PATH = MODELS_DIR / "model.pkl"
 ENCODER_SEXE_PATH = MODELS_DIR / "encoder_sexe.pkl"
 ENCODER_REGION_PATH = MODELS_DIR / "encoder_region.pkl"
@@ -25,7 +28,7 @@ FEATURE_COLS_PATH = MODELS_DIR / "feature_cols.pkl"
 app = FastAPI(
     title="SenSante API",
     description="API de pre-diagnostic medical avec explication LLM via Groq.",
-    version="4.0.0",
+    version="1.0.0",
 )
 
 app.add_middleware(
@@ -35,6 +38,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
 load_dotenv(ROOT / ".env")
 GROQ_MODEL = "llama-3.1-8b-instant"
@@ -196,9 +201,16 @@ def build_feature_frame(patient: PatientInput, artifacts: dict[str, Any]) -> pd.
 
 
 @app.get("/")
-def root() -> dict[str, str]:
+def serve_frontend() -> FileResponse:
+    """Servir la page d'accueil SenSante."""
+    return FileResponse(FRONTEND_DIR / "index.html")
+
+
+@app.get("/api")
+def api_info() -> dict[str, str]:
     return {
         "message": "Bienvenue sur l'API SenSante.",
+        "frontend": "/",
         "health": "/health",
         "predict": "/predict",
         "explain": "/explain",
