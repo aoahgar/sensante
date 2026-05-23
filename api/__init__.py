@@ -1,0 +1,1 @@
+"""SenSante FastAPI package."""

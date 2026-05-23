@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SenSante - Diagnostic assiste</title>
+    <link rel="icon" href="data:," />
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="min-h-screen bg-stone-100 text-slate-900">
+    <main class="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-6 md:px-8">
+      <header class="border-b border-stone-300 pb-4">
+        <p class="text-sm font-semibold uppercase tracking-wide text-emerald-700">SenSante v4</p>
+        <h1 class="mt-1 text-3xl font-bold text-slate-950">Diagnostic et explication medicale</h1>
+        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+          Interface de test pour le modele ML SenSante et l'explication Llama 3 via Groq.
+        </p>
+      </header>
+
+      <section class="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+        <form id="diagnostic-form" class="rounded-lg border border-stone-300 bg-white p-5 shadow-sm">
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="block">
+              <span class="text-sm font-medium text-slate-700">Age</span>
+              <input id="age" type="number" min="0" max="120" value="28" required class="mt-1 w-full rounded-md border border-stone-300 px-3 py-2 text-sm outline-none focus:border-emerald-600" />
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium text-slate-700">Sexe</span>
+              <select id="sexe" class="mt-1 w-full rounded-md border border-stone-300 px-3 py-2 text-sm outline-none focus:border-emerald-600">
+                <option value="F">F</option>
+                <option value="M">M</option>
+              </select>
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium text-slate-700">Temperature (C)</span>
+              <input id="temperature" type="number" step="0.1" min="30" max="45" value="39.5" required class="mt-1 w-full rounded-md border border-stone-300 px-3 py-2 text-sm outline-none focus:border-emerald-600" />
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium text-slate-700">Tension systolique</span>
+              <input id="tension_sys" type="number" min="50" max="250" value="110" required class="mt-1 w-full rounded-md border border-stone-300 px-3 py-2 text-sm outline-none focus:border-emerald-600" />
+            </label>
+            <label class="block sm:col-span-2">
+              <span class="text-sm font-medium text-slate-700">Region</span>
+              <select id="region" class="mt-1 w-full rounded-md border border-stone-300 px-3 py-2 text-sm outline-none focus:border-emerald-600">
+                <option value="Dakar">Dakar</option>
+                <option value="Diourbel">Diourbel</option>
+                <option value="Fatick">Fatick</option>
+                <option value="Kaolack">Kaolack</option>
+                <option value="Kolda">Kolda</option>
+                <option value="Louga">Louga</option>
+                <option value="Matam">Matam</option>
+                <option value="Saint-Louis">Saint-Louis</option>
+                <option value="Tambacounda">Tambacounda</option>
+                <option value="Thies">Thies</option>
+                <option value="Ziguinchor">Ziguinchor</option>
+              </select>
+            </label>
+          </div>
+
+          <fieldset class="mt-5">
+            <legend class="text-sm font-medium text-slate-700">Symptomes observes</legend>
+            <div class="mt-3 grid gap-3 sm:grid-cols-2">
+              <label class="flex items-center gap-2 rounded-md border border-stone-200 px-3 py-2 text-sm"><input id="toux" type="checkbox" checked class="h-4 w-4 accent-emerald-700" /> Toux</label>
+              <label class="flex items-center gap-2 rounded-md border border-stone-200 px-3 py-2 text-sm"><input id="fatigue" type="checkbox" checked class="h-4 w-4 accent-emerald-700" /> Fatigue</label>
+              <label class="flex items-center gap-2 rounded-md border border-stone-200 px-3 py-2 text-sm"><input id="maux_tete" type="checkbox" checked class="h-4 w-4 accent-emerald-700" /> Maux de tete</label>
+              <label class="flex items-center gap-2 rounded-md border border-stone-200 px-3 py-2 text-sm"><input id="frissons" type="checkbox" checked class="h-4 w-4 accent-emerald-700" /> Frissons</label>
+              <label class="flex items-center gap-2 rounded-md border border-stone-200 px-3 py-2 text-sm"><input id="nausee" type="checkbox" class="h-4 w-4 accent-emerald-700" /> Nausee</label>
+            </div>
+          </fieldset>
+
+          <div class="mt-5 flex items-center gap-3">
+            <button type="submit" class="rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2">
+              Diagnostiquer
+            </button>
+            <p id="status" class="text-sm text-slate-500"></p>
+          </div>
+        </form>
+
+        <section id="result-section" class="rounded-lg border border-stone-300 bg-white p-5 shadow-sm">
+          <h2 class="text-lg font-semibold text-slate-950">Resultat</h2>
+          <div id="result-content" class="mt-4 text-sm text-slate-500">
+            Aucun diagnostic lance pour le moment.
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script>
+      const API_URL = "http://127.0.0.1:8000";
+      const form = document.getElementById("diagnostic-form");
+      const statusEl = document.getElementById("status");
+      const resultContent = document.getElementById("result-content");
+
+      function formData() {
+        return {
+          age: parseInt(document.getElementById("age").value, 10),
+          sexe: document.getElementById("sexe").value,
+          temperature: parseFloat(document.getElementById("temperature").value),
+          tension_sys: parseInt(document.getElementById("tension_sys").value, 10),
+          toux: document.getElementById("toux").checked,
+          fatigue: document.getElementById("fatigue").checked,
+          maux_tete: document.getElementById("maux_tete").checked,
+          frissons: document.getElementById("frissons").checked,
+          nausee: document.getElementById("nausee").checked,
+          region: document.getElementById("region").value,
+        };
+      }
+
+      function probabilityRows(probabilities) {
+        return Object.entries(probabilities)
+          .map(([label, value]) => {
+            const percent = Math.round(value * 100);
+            return `
+              <div class="space-y-1">
+                <div class="flex justify-between text-xs text-slate-600">
+                  <span>${label}</span><span>${percent}%</span>
+                </div>
+                <div class="h-2 rounded-full bg-stone-200">
+                  <div class="h-2 rounded-full bg-amber-500" style="width:${percent}%"></div>
+                </div>
+              </div>`;
+          })
+          .join("");
+      }
+
+      function afficherResultat(r) {
+        const percent = Math.round(r.confidence * 100);
+        resultContent.innerHTML = `
+          <div class="space-y-4">
+            <div class="rounded-md border border-emerald-200 bg-emerald-50 p-4">
+              <p class="text-xs font-semibold uppercase tracking-wide text-emerald-800">Diagnostic ML</p>
+              <div class="mt-2 flex items-end justify-between gap-3">
+                <p class="text-2xl font-bold text-slate-950">${r.diagnostic}</p>
+                <p class="text-sm font-semibold text-emerald-800">${percent}%</p>
+              </div>
+            </div>
+            <div class="space-y-3">${probabilityRows(r.probabilities)}</div>
+            <div id="explication-zone" class="rounded-md border border-violet-200 bg-violet-50 p-4">
+              <p class="text-xs font-semibold uppercase tracking-wide text-violet-800">Explication Llama 3</p>
+              <p class="mt-2 animate-pulse text-sm text-slate-500">Generation en cours...</p>
+            </div>
+          </div>`;
+        demanderExplication(r);
+      }
+
+      async function demanderExplication(diagnosticData) {
+        const patient = formData();
+        const explainData = {
+          diagnostic: diagnosticData.diagnostic,
+          probabilite: diagnosticData.confidence,
+          age: patient.age,
+          sexe: patient.sexe,
+          temperature: patient.temperature,
+          region: patient.region,
+        };
+        const explDiv = document.getElementById("explication-zone");
+
+        try {
+          const response = await fetch(`${API_URL}/explain`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(explainData),
+          });
+          const result = await response.json();
+          explDiv.innerHTML = `
+            <p class="text-xs font-semibold uppercase tracking-wide text-violet-800">Explication Llama 3</p>
+            <p class="mt-2 text-sm leading-6 text-slate-700">${result.explication}</p>
+            <p class="mt-3 text-xs text-slate-500">Modele : ${result.modele_llm}</p>`;
+        } catch (error) {
+          explDiv.innerHTML = `
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-600">Explication</p>
+            <p class="mt-2 text-sm text-slate-500">Explication non disponible.</p>`;
+        }
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        statusEl.textContent = "Analyse en cours...";
+        resultContent.textContent = "Appel du modele ML...";
+
+        try {
+          const response = await fetch(`${API_URL}/predict`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(formData()),
+          });
+          if (!response.ok) {
+            throw new Error(`Erreur API ${response.status}`);
+          }
+          const result = await response.json();
+          afficherResultat(result);
+          statusEl.textContent = "Diagnostic termine.";
+        } catch (error) {
+          statusEl.textContent = "";
+          resultContent.innerHTML = `<p class="text-sm text-red-700">${error.message}</p>`;
+        }
+      });
+    </script>
+  </body>
+</html>
